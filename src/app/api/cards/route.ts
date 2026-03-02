@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     let query = supabase
-      .from('cards_with_prices')
+      .from('cards')
       .select('*', { count: 'exact' });
 
     if (q) {
@@ -32,10 +32,10 @@ export async function GET(request: NextRequest) {
 
     switch (sort) {
       case 'price_desc':
-        query = query.order('market_price', { ascending: false, nullsFirst: false });
+        query = query.order('loose_price', { ascending: false, nullsFirst: false });
         break;
       case 'price_asc':
-        query = query.order('market_price', { ascending: true, nullsFirst: false });
+        query = query.order('loose_price', { ascending: true, nullsFirst: false });
         break;
       case 'change_24h_desc':
         query = query.order('change_24h', { ascending: false, nullsFirst: false });
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         query = query.order('name', { ascending: false });
         break;
       default:
-        query = query.order('market_price', { ascending: false, nullsFirst: false });
+        query = query.order('loose_price', { ascending: false, nullsFirst: false });
     }
 
     query = query.range(offset, offset + limit - 1);
@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
 
     const enriched = (cards || []).map((card: Record<string, unknown>) => ({
       ...card,
+      market_price: card.loose_price,  // UI 호환성
       sparkline: sparklineMap[card.id as string] || [],
     }));
 
