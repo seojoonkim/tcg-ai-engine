@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Sparkline from './Sparkline';
 
 interface Card {
@@ -39,28 +39,10 @@ interface CardTableProps {
 }
 
 export default function CardTable({ cards, currency, onCardClick, onIpChange }: CardTableProps) {
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('All');
-
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('tcg_favorites') || '[]');
-      setFavorites(new Set(saved));
-    } catch {}
-  }, []);
-
-  const toggleFav = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setFavorites(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      localStorage.setItem('tcg_favorites', JSON.stringify([...next]));
-      return next;
-    });
-  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -74,9 +56,6 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
   };
 
   const sorted = [...cards].sort((a, b) => {
-    const favA = favorites.has(a.id) ? -1 : 0;
-    const favB = favorites.has(b.id) ? -1 : 0;
-    if (favA !== favB) return favA - favB;
     let va = 0, vb = 0;
     if (sortKey === 'rank' || sortKey === 'price') { va = a.market_price ?? -Infinity; vb = b.market_price ?? -Infinity; }
     else if (sortKey === 'change_24h') { va = a.change_24h ?? -Infinity; vb = b.change_24h ?? -Infinity; }
@@ -136,7 +115,6 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
           <thead>
             <tr style={{ background: '#131D2E' }}>
               <th style={{ ...thStyle, width: 40, textAlign: 'center' }} onClick={() => handleSort('rank')}>#<SortArrow col="rank" /></th>
-              <th style={{ ...thStyle, width: 30, textAlign: 'center' }}>★</th>
               <th style={thStyle}>Card</th>
               <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('price')}>Price<SortArrow col="price" /></th>
               <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('change_24h')}>24h %<SortArrow col="change_24h" /></th>
@@ -150,7 +128,6 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
             {sorted.map((card, idx) => {
               const is24Up = (card.change_24h ?? 0) >= 0;
               const is7dUp = (card.change_7d ?? 0) >= 0;
-              const isFav = favorites.has(card.id);
               const sparkPos = card.sparkline.length >= 2 ? card.sparkline[card.sparkline.length - 1] >= card.sparkline[0] : true;
               return (
                 <tr
@@ -161,15 +138,8 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <td style={{ ...tdStyle, textAlign: 'center', color: '#8A92A6', fontWeight: 600, fontSize: 11 }}>{idx + 1}</td>
-                  <td style={{ ...tdStyle, textAlign: 'center' }}>
-                    <button
-                      onClick={e => toggleFav(e, card.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: isFav ? '#F0B90B' : '#2A3444', lineHeight: 1 }}
-                    >★</button>
-                  </td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {/* Card image — 2:3 ratio, 32x44px */}
                       <div style={{ width: 32, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0D1421', borderRadius: 3, overflow: 'hidden' }}>
                         {!imgErrors.has(card.id) && card.image_url ? (
                           <img
