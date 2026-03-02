@@ -85,11 +85,32 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const enriched = (cards || []).map((card: Record<string, unknown>) => ({
-      ...card,
-      market_price: card.loose_price,  // UI 호환성
-      sparkline: sparklineMap[card.id as string] || [],
-    }));
+    const enriched = (cards || []).map((card: Record<string, unknown>) => {
+      const sparkline = sparklineMap[card.id as string] || [];
+      const currentPrice = (card.loose_price as number) || 0;
+      
+      // 24h 변화율: sparkline[-2] 기준 (약 1일 전)
+      let change24h: number | null = null;
+      if (sparkline.length >= 2 && currentPrice > 0) {
+        const prev = sparkline[sparkline.length - 2];
+        if (prev > 0) change24h = ((currentPrice - prev) / prev) * 100;
+      }
+      
+      // 7d 변화율: sparkline[0] 기준 (7일 전)
+      let change7d: number | null = null;
+      if (sparkline.length >= 2 && currentPrice > 0) {
+        const prev7 = sparkline[0];
+        if (prev7 > 0) change7d = ((currentPrice - prev7) / prev7) * 100;
+      }
+      
+      return {
+        ...card,
+        market_price: currentPrice,
+        change_24h: change24h,
+        change_7d: change7d,
+        sparkline,
+      };
+    });
 
     return NextResponse.json(
       {
