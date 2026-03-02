@@ -94,14 +94,16 @@ export async function GET(request: NextRequest) {
       let change24h: number | null = null;
       if (sparkline.length >= 2) {
         const prev = sparkline[sparkline.length - 2];
-        if (prev > 0) change24h = +((currentPrice - prev) / prev * 100).toFixed(2);
+        const raw24h = (currentPrice - prev) / prev * 100;
+        if (Math.abs(raw24h) <= 500) change24h = +raw24h.toFixed(2);
       }
       
       // 7d 변화율: sparkline 첫 값 기준
       let change7d: number | null = null;
       if (sparkline.length >= 2) {
         const prev7 = sparkline[0];
-        if (prev7 > 0) change7d = +((currentPrice - prev7) / prev7 * 100).toFixed(2);
+        const raw7d = prev7 > 0 ? (currentPrice - prev7) / prev7 * 100 : 0;
+        if (prev7 > 0 && Math.abs(raw7d) <= 500) change7d = +raw7d.toFixed(2);
       }
       
       return {
