@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const revalidate = 300; // 5-min edge cache
+// Cache-Control header below handles edge caching
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
