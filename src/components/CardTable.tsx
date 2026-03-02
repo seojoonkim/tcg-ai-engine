@@ -96,20 +96,20 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
   };
 
   const SortArrow = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <span style={{ color: '#2A3444', marginLeft: 4 }}>↕</span>;
-    return <span style={{ color: '#F0B90B', marginLeft: 4 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
+    if (sortKey !== col) return <span style={{ color: '#2A3444', marginLeft: 3 }}>↕</span>;
+    return <span style={{ color: '#F0B90B', marginLeft: 3 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
   };
 
   const thStyle: React.CSSProperties = {
-    padding: '12px 16px', color: '#8A92A6', fontSize: 12, fontWeight: 600,
+    padding: '8px 10px', color: '#8A92A6', fontSize: 11, fontWeight: 600,
     textAlign: 'left', borderBottom: '1px solid #2A3444', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none'
   };
-  const tdStyle: React.CSSProperties = { padding: '12px 16px', borderBottom: '1px solid #2A3444', fontSize: 13, color: '#fff', verticalAlign: 'middle' };
+  const tdStyle: React.CSSProperties = { padding: '6px 10px', borderBottom: '1px solid #1A2332', fontSize: 12, color: '#fff', verticalAlign: 'middle' };
 
   return (
     <div>
       {/* IP Tabs */}
-      <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderBottom: '1px solid #2A3444', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, padding: '8px 12px', borderBottom: '1px solid #2A3444', flexWrap: 'wrap' }}>
         {IP_TABS.map(tab => (
           <button
             key={tab}
@@ -118,11 +118,11 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
               background: activeTab === tab ? '#F0B90B' : '#2A3444',
               color: activeTab === tab ? '#000' : '#8A92A6',
               border: 'none',
-              borderRadius: 6,
-              padding: '6px 14px',
+              borderRadius: 5,
+              padding: '4px 10px',
               cursor: 'pointer',
               fontWeight: 600,
-              fontSize: 12,
+              fontSize: 11,
               transition: 'all 0.15s',
             }}
           >
@@ -132,18 +132,18 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
           <thead>
-            <tr style={{ background: '#1A2332' }}>
-              <th style={{ ...thStyle, width: 48, textAlign: 'center' }} onClick={() => handleSort('rank')}>#<SortArrow col="rank" /></th>
-              <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>★</th>
+            <tr style={{ background: '#131D2E' }}>
+              <th style={{ ...thStyle, width: 40, textAlign: 'center' }} onClick={() => handleSort('rank')}>#<SortArrow col="rank" /></th>
+              <th style={{ ...thStyle, width: 30, textAlign: 'center' }}>★</th>
               <th style={thStyle}>Card</th>
               <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('price')}>Price<SortArrow col="price" /></th>
               <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('change_24h')}>24h %<SortArrow col="change_24h" /></th>
               <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('change_7d')}>7d %<SortArrow col="change_7d" /></th>
               <th style={{ ...thStyle, textAlign: 'right' }}>7d Low</th>
               <th style={{ ...thStyle, textAlign: 'right' }}>7d High</th>
-              <th style={{ ...thStyle, textAlign: 'center', width: 110 }}>7d Chart</th>
+              <th style={{ ...thStyle, textAlign: 'center', width: 100 }}>7d Chart</th>
             </tr>
           </thead>
           <tbody>
@@ -156,32 +156,33 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
                 <tr
                   key={card.id}
                   onClick={() => onCardClick(card)}
-                  style={{ cursor: 'pointer', transition: 'background 0.15s' }}
+                  style={{ cursor: 'pointer', transition: 'background 0.1s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#1F2D40')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <td style={{ ...tdStyle, textAlign: 'center', color: '#8A92A6', fontWeight: 600 }}>{idx + 1}</td>
+                  <td style={{ ...tdStyle, textAlign: 'center', color: '#8A92A6', fontWeight: 600, fontSize: 11 }}>{idx + 1}</td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     <button
                       onClick={e => toggleFav(e, card.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: isFav ? '#F0B90B' : '#2A3444', lineHeight: 1 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: isFav ? '#F0B90B' : '#2A3444', lineHeight: 1 }}
                     >★</button>
                   </td>
                   <td style={tdStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 32, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Card image — 2:3 ratio, 32x44px */}
+                      <div style={{ width: 32, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0D1421', borderRadius: 3, overflow: 'hidden' }}>
                         {!imgErrors.has(card.id) && card.image_url ? (
                           <img
                             src={card.image_url}
                             alt={card.name}
-                            style={{ maxWidth: 32, maxHeight: 44, objectFit: 'contain', borderRadius: 3 }}
+                            style={{ width: 32, height: 44, objectFit: 'cover', borderRadius: 3 }}
                             onError={() => setImgErrors(prev => new Set([...prev, card.id]))}
                           />
-                        ) : <span style={{ fontSize: 20 }}>🃏</span>}
+                        ) : <span style={{ fontSize: 16 }}>🃏</span>}
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#fff', fontSize: 13, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.name}</div>
-                        <div style={{ color: '#8A92A6', fontSize: 11 }}>{card.set_name}{card.ip_name ? ` · ${card.ip_name}` : ''}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: '#fff', fontSize: 12, whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.name}</div>
+                        <div style={{ color: '#8A92A6', fontSize: 10, marginTop: 1 }}>{card.set_name}{card.ip_name ? ` · ${card.ip_name}` : ''}</div>
                       </div>
                     </div>
                   </td>
@@ -194,7 +195,7 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'right', color: '#8A92A6' }}>{fmtPrice(card.low_price)}</td>
                   <td style={{ ...tdStyle, textAlign: 'right', color: '#8A92A6' }}>{fmtPrice(card.high_price)}</td>
-                  <td style={{ ...tdStyle, padding: '6px 16px' }}>
+                  <td style={{ ...tdStyle, padding: '4px 10px' }}>
                     <Sparkline data={card.sparkline} positive={sparkPos} />
                   </td>
                 </tr>

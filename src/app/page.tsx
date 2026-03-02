@@ -64,12 +64,12 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0D1421', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      {/* Top header */}
-      <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444', padding: '0' }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 22 }}>🃏</span>
-          <span style={{ color: '#F0B90B', fontWeight: 800, fontSize: 18, letterSpacing: '-0.5px' }}>TCG Market</span>
-          <div style={{ flex: 1, position: 'relative', maxWidth: 360 }}>
+      {/* Top header — compact */}
+      <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444' }}>
+        <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 18 }}>🃏</span>
+          <span style={{ color: '#F0B90B', fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px' }}>TCG Market</span>
+          <div style={{ flex: 1, position: 'relative', maxWidth: 320 }}>
             <input
               type="text"
               placeholder="Search cards..."
@@ -77,11 +77,11 @@ export default function Home() {
               onChange={e => setSearch(e.target.value)}
               style={{
                 width: '100%', background: '#1A2332', border: '1px solid #2A3444',
-                borderRadius: 8, padding: '8px 16px 8px 36px', color: '#fff',
-                fontSize: 13, outline: 'none', boxSizing: 'border-box'
+                borderRadius: 6, padding: '6px 14px 6px 32px', color: '#fff',
+                fontSize: 12, outline: 'none', boxSizing: 'border-box'
               }}
             />
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#8A92A6', fontSize: 14 }}>🔍</span>
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8A92A6', fontSize: 12 }}>🔍</span>
           </div>
         </div>
       </div>
@@ -89,15 +89,9 @@ export default function Home() {
       {/* Stats bar */}
       <StatsBar cards={cards} total={total} currency={currency} onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')} />
 
-      {/* Page title */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 24px 12px' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>TCG Card Prices</h1>
-        <p style={{ color: '#8A92A6', fontSize: 13, marginTop: 4 }}>Sorted by market cap | Click row for price chart</p>
-      </div>
-
-      {/* Table */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
-        <div style={{ background: '#1A2332', border: '1px solid #2A3444', borderRadius: 12, overflow: 'hidden' }}>
+      {/* Table — full width, no container padding */}
+      <div style={{ width: '100%' }}>
+        <div style={{ background: '#1A2332', borderTop: '1px solid #2A3444', overflow: 'hidden' }}>
           {loading ? (
             <div style={{ padding: 60, textAlign: 'center', color: '#8A92A6' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
@@ -115,13 +109,13 @@ export default function Home() {
 
         {/* Load more */}
         {!loading && totalPages > page && (
-          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <button
               onClick={() => setPage(p => p + 1)}
               style={{
                 background: '#1A2332', border: '1px solid #2A3444',
-                color: '#F0B90B', padding: '12px 40px', borderRadius: 8,
-                cursor: 'pointer', fontWeight: 600, fontSize: 14
+                color: '#F0B90B', padding: '10px 36px', borderRadius: 8,
+                cursor: 'pointer', fontWeight: 600, fontSize: 13
               }}
             >
               Load More ({page * 100} / {total})
@@ -129,7 +123,7 @@ export default function Home() {
           </div>
         )}
 
-        <div style={{ height: 48 }} />
+        <div style={{ height: 32 }} />
       </div>
 
       {/* Modal */}
