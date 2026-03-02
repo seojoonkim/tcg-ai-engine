@@ -25,7 +25,7 @@ interface TcgCard {
   };
 }
 
-function extractPrice(prices: TcgCard['tcgplayer']['prices']) {
+function extractPrice(prices: Record<string, { low?: number; mid?: number; high?: number; market?: number } | undefined> | undefined | null) {
   if (!prices) return null;
   const variant = prices['holofoil'] || prices['1stEditionHolofoil'] || prices['normal'] || prices['reverseHolofoil'];
   if (!variant) return null;
