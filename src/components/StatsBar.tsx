@@ -39,9 +39,15 @@ export default function StatsBar({ cards, total, currency, onCurrencyToggle }: S
         <span style={{ color: '#2A3444' }}>|</span>
         <span>Cards: <strong style={{ color: '#fff' }}>{total.toLocaleString()}</strong></span>
         <span style={{ color: '#2A3444' }}>|</span>
-        <span>Gainers: <strong style={{ color: '#16C784' }}>{rising} ▲</strong></span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: '#8A92A6' }}>Gainers</span>
+          <strong style={{ color: '#16C784', fontSize: 20, fontWeight: 800 }}>{rising} ▲</strong>
+        </span>
         <span style={{ color: '#2A3444' }}>|</span>
-        <span>Losers: <strong style={{ color: '#EA3943' }}>{falling} ▼</strong></span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: '#8A92A6' }}>Losers</span>
+          <strong style={{ color: '#EA3943', fontSize: 20, fontWeight: 800 }}>{falling} ▼</strong>
+        </span>
         <span style={{ color: '#2A3444' }}>|</span>
         <span>Total Value: <strong style={{ color: '#fff' }}>{fmt(totalVolume)}</strong></span>
         <span style={{ color: '#2A3444' }}>|</span>
