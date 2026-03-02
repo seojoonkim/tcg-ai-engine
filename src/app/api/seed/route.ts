@@ -25,7 +25,7 @@ interface TcgCard {
   };
 }
 
-function extractPrice(prices: Record<string, { low?: number; mid?: number; high?: number; market?: number } | undefined> | undefined | null) {
+function extractPrice(prices: Record<string, { low?: number; mid?: number; high?: number; market?: number } | undefined> | null | undefined) {
   if (!prices) return null;
   const variant = prices['holofoil'] || prices['1stEditionHolofoil'] || prices['normal'] || prices['reverseHolofoil'];
   if (!variant) return null;
@@ -73,89 +73,86 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    // 1. Truncate existing data
+  const pageParam = searchParams.get('page');
+  const truncate = searchParams.get('truncate') === '1';
+
+  // Step 0: truncate (call with ?truncate=1 first)
+  if (truncate) {
     await supabase.from('price_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('cards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-
-    let totalCards = 0;
-    let totalHistory = 0;
-    const errors: string[] = [];
-
-    // 2. Fetch 4 pages from pokemon-tcg.io
-    for (let page = 1; page <= 4; page++) {
-      const url = `${TCG_API_BASE}?q=supertype:Pokemon&pageSize=250&page=${page}`;
-      const res = await fetch(url, {
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(30000),
-      });
-
-      if (!res.ok) {
-        errors.push(`Page ${page}: HTTP ${res.status}`);
-        continue;
-      }
-
-      const data = await res.json();
-      const cards: TcgCard[] = data.data || [];
-
-      if (cards.length === 0) break;
-
-      const cardRows = cards.map((card) => ({
-        id: card.id,
-        name: card.name,
-        supertype: card.supertype,
-        subtypes: card.subtypes || [],
-        hp: card.hp ? parseInt(card.hp) : null,
-        types: card.types || [],
-        rarity: card.rarity || null,
-        set_id: card.set?.id || null,
-        set_name: card.set?.name || null,
-        set_series: card.set?.series || null,
-        image_small: card.images?.small || null,
-        image_large: card.images?.large || null,
-        tcgplayer_url: card.tcgplayer?.url || null,
-      }));
-
-      const { error: cardError } = await supabase
-        .from('cards')
-        .upsert(cardRows, { onConflict: 'id' });
-
-      if (cardError) {
-        errors.push(`Page ${page} cards upsert: ${cardError.message}`);
-        continue;
-      }
-
-      totalCards += cardRows.length;
-
-      const historyRows: object[] = [];
-      for (const card of cards) {
-        const price = extractPrice(card.tcgplayer?.prices);
-        if (!price || price.market == null) continue;
-
-        const rows = generatePriceHistory(card.id, price.market, price.low, price.high);
-        historyRows.push(...rows);
-      }
-
-      if (historyRows.length > 0) {
-        for (let i = 0; i < historyRows.length; i += 500) {
-          const chunk = historyRows.slice(i, i + 500);
-          const { error: histError } = await supabase.from('price_history').insert(chunk);
-          if (histError) {
-            errors.push(`Page ${page} history insert: ${histError.message}`);
-          } else {
-            totalHistory += chunk.length;
-          }
-        }
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      cards: totalCards,
-      price_history: totalHistory,
-      errors: errors.length > 0 ? errors : undefined,
-    });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ success: true, action: 'truncated' });
   }
+
+  const page = parseInt(pageParam || '1');
+  if (isNaN(page) || page < 1 || page > 4) {
+    return NextResponse.json({ error: 'page must be 1-4' }, { status: 400 });
+  }
+
+  const url = `${TCG_API_BASE}?q=supertype:Pokemon&pageSize=250&page=${page}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!res.ok) {
+    return NextResponse.json({ error: `TCG API HTTP ${res.status}` }, { status: 502 });
+  }
+
+  const data = await res.json();
+  const cards: TcgCard[] = data.data || [];
+
+  if (cards.length === 0) {
+    return NextResponse.json({ success: true, page, cards: 0, price_history: 0 });
+  }
+
+  const cardRows = cards.map((card) => ({
+    id: card.id,
+    name: card.name,
+    supertype: card.supertype,
+    subtypes: card.subtypes || [],
+    hp: card.hp ? parseInt(card.hp) : null,
+    types: card.types || [],
+    rarity: card.rarity || null,
+    set_id: card.set?.id || null,
+    set_name: card.set?.name || null,
+    set_series: card.set?.series || null,
+    image_small: card.images?.small || null,
+    image_large: card.images?.large || null,
+    tcgplayer_url: card.tcgplayer?.url || null,
+  }));
+
+  const { error: cardError } = await supabase
+    .from('cards')
+    .upsert(cardRows, { onConflict: 'id' });
+
+  if (cardError) {
+    return NextResponse.json({ error: cardError.message }, { status: 500 });
+  }
+
+  const historyRows: object[] = [];
+  for (const card of cards) {
+    const price = extractPrice(card.tcgplayer?.prices);
+    if (!price || price.market == null) continue;
+    historyRows.push(...generatePriceHistory(card.id, price.market, price.low, price.high));
+  }
+
+  let totalHistory = 0;
+  const errors: string[] = [];
+  for (let i = 0; i < historyRows.length; i += 500) {
+    const chunk = historyRows.slice(i, i + 500);
+    const { error: histError } = await supabase.from('price_history').insert(chunk);
+    if (histError) {
+      errors.push(histError.message);
+    } else {
+      totalHistory += chunk.length;
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    page,
+    cards: cardRows.length,
+    price_history: totalHistory,
+    errors: errors.length > 0 ? errors : undefined,
+  });
 }
