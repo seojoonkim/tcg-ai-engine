@@ -47,11 +47,17 @@ SEARCHES = {
     ]
 }
 
+HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+
+def fetch_url(url):
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.load(r)
+
 def search_cards(query, limit=20):
     url = f"https://www.pricecharting.com/api/products?t={TOKEN}&q={urllib.parse.quote(query)}"
     try:
-        with urllib.request.urlopen(url, timeout=15) as r:
-            data = json.load(r)
+        data = fetch_url(url)
         return data.get("products", [])[:limit]
     except Exception as e:
         print(f"  search error for '{query}': {e}")
@@ -60,8 +66,7 @@ def search_cards(query, limit=20):
 def get_price(product_id):
     url = f"https://www.pricecharting.com/api/product?t={TOKEN}&id={product_id}"
     try:
-        with urllib.request.urlopen(url, timeout=15) as r:
-            return json.load(r)
+        return fetch_url(url)
     except Exception as e:
         print(f"  price error for id {product_id}: {e}")
         return {}
