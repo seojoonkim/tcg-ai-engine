@@ -33,7 +33,6 @@ export default function Home() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [currency, setCurrency] = useState<'USD' | 'KRW'>('USD');
   const [activeIp, setActiveIp] = useState('');
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const hasMore = page < totalPages;
 
   useEffect(() => {
@@ -66,22 +65,13 @@ export default function Home() {
     fetchCards(1, false);
   }, [fetchCards]);
 
-  // Intersection Observer — infinite scroll
-  useEffect(() => {
-    if (!sentinelRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
-          const nextPage = page + 1;
-          setPage(nextPage);
-          fetchCards(nextPage, true);
-        }
-      },
-      { rootMargin: '200px' }
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, loadingMore, loading, page, fetchCards]);
+  // Load More handler
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchCards(nextPage, true);
+  };
 
   const handleIpChange = (ip: string) => {
     setActiveIp(ip);
@@ -134,8 +124,18 @@ export default function Home() {
           )}
         </div>
 
-        {/* Infinite scroll sentinel */}
-        <div ref={sentinelRef} style={{ height: 1 }} />
+        {/* Load More button */}
+        {hasMore && (
+          <div style={{ textAlign: "center", padding: "24px" }}>
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              style={{ background: "#F0B90B", color: "#000", border: "none", borderRadius: 8, padding: "10px 32px", fontWeight: 700, fontSize: 14, cursor: loadingMore ? "not-allowed" : "pointer", opacity: loadingMore ? 0.6 : 1 }}
+            >
+              {loadingMore ? "Loading..." : "Load More"}
+            </button>
+          </div>
+        )}
 
         {/* Loading more indicator */}
         {loadingMore && (
