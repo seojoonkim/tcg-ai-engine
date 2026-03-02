@@ -105,7 +105,7 @@ export default function Home() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="date" stroke="#6b7280" tick={{ fontSize: 12 }} />
                   <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} domain={['auto', 'auto']} tickFormatter={v => `$${v}`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v: number) => [`$${v}`, 'Price']} />
+                  <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }} formatter={(v: number | undefined) => [`$${v ?? 0}`, 'Price']} />
                   <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
