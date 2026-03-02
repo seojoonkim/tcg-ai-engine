@@ -85,7 +85,7 @@ export default function Home() {
       <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444' }}>
         <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 18 }}>🃏</span>
-          <span style={{ color: '#F0B90B', fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px' }}>TCG Market</span>
+          <span style={{ color: '#F0B90B', fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px' }}>TCG AI Engine</span>
           <div style={{ flex: 1, position: 'relative', maxWidth: 320 }}>
             <input
               type="text"
