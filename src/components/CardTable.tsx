@@ -36,13 +36,15 @@ interface CardTableProps {
   currency: 'USD' | 'KRW';
   onCardClick: (card: Card) => void;
   onIpChange?: (ip: string) => void;
+  activeIp?: string;
 }
 
-export default function CardTable({ cards, currency, onCardClick, onIpChange }: CardTableProps) {
+export default function CardTable({ cards, currency, onCardClick, onIpChange, activeIp = '' }: CardTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState('All');
+  // activeTab: parent의 activeIp prop으로 동기화 (unmount 후 초기화 방지)
+  const activeTab = activeIp === '' ? 'All' : (Object.entries(IP_API_MAP).find(([, v]) => v === activeIp)?.[0] || 'All');
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -50,7 +52,6 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange }: 
   };
 
   const handleTabClick = (tab: string) => {
-    setActiveTab(tab);
     const apiIp = tab === 'All' ? '' : (IP_API_MAP[tab] || tab);
     if (onIpChange) onIpChange(apiIp);
   };

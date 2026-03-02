@@ -114,13 +114,8 @@ export default function Home() {
               <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
               <div>Loading card data...</div>
             </div>
-          ) : cards.length === 0 ? (
-            <div style={{ padding: 60, textAlign: 'center', color: '#8A92A6' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>🃏</div>
-              <div>No cards found</div>
-            </div>
           ) : (
-            <CardTable cards={cards} currency={currency} onCardClick={setSelectedCard} onIpChange={handleIpChange} />
+            <CardTable cards={cards} currency={currency} onCardClick={setSelectedCard} onIpChange={handleIpChange} activeIp={activeIp} />
           )}
         </div>
 
