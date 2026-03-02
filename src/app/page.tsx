@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import StatsBar from '@/components/StatsBar';
 import CardTable from '@/components/CardTable';
 import CardModal from '@/components/CardModal';
@@ -24,6 +24,7 @@ interface Card {
 export default function Home() {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -32,39 +33,65 @@ export default function Home() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [currency, setCurrency] = useState<'USD' | 'KRW'>('USD');
   const [activeIp, setActiveIp] = useState('');
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasMore = page < totalPages;
 
   useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); setCards([]); }, 400);
     return () => clearTimeout(t);
   }, [search]);
 
-  const fetchCards = useCallback(async () => {
-    setLoading(true);
+  const fetchCards = useCallback(async (pageNum: number, append: boolean) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     try {
-      const params = new URLSearchParams({ q: debouncedSearch, page: String(page), limit: '100', sort: 'price_desc' });
+      const params = new URLSearchParams({ q: debouncedSearch, page: String(pageNum), limit: '50', sort: 'price_desc' });
       if (activeIp) params.set('ip', activeIp);
       const res = await fetch(`/api/cards?${params}`);
       const data = await res.json();
-      setCards(data.cards || []);
+      setCards(prev => append ? [...prev, ...(data.cards || [])] : (data.cards || []));
       setTotalPages(data.pages || 1);
       setTotal(data.total || 0);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [debouncedSearch, page, activeIp]);
+  }, [debouncedSearch, activeIp]);
 
-  useEffect(() => { fetchCards(); }, [fetchCards]);
+  // Initial / search / IP change load
+  useEffect(() => {
+    setPage(1);
+    fetchCards(1, false);
+  }, [fetchCards]);
+
+  // Intersection Observer — infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchCards(nextPage, true);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, page, fetchCards]);
 
   const handleIpChange = (ip: string) => {
     setActiveIp(ip);
     setPage(1);
+    setCards([]);
   };
 
   return (
     <div style={{ minHeight: '100vh', background: '#0D1421', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      {/* Top header — compact */}
+      {/* Top header */}
       <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444' }}>
         <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 18 }}>🃏</span>
@@ -89,7 +116,7 @@ export default function Home() {
       {/* Stats bar */}
       <StatsBar cards={cards} total={total} currency={currency} onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')} />
 
-      {/* Table — full width, no container padding */}
+      {/* Table */}
       <div style={{ width: '100%' }}>
         <div style={{ background: '#1A2332', borderTop: '1px solid #2A3444', overflow: 'hidden' }}>
           {loading ? (
@@ -107,19 +134,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* Load more */}
-        {!loading && totalPages > page && (
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              style={{
-                background: '#1A2332', border: '1px solid #2A3444',
-                color: '#F0B90B', padding: '10px 36px', borderRadius: 8,
-                cursor: 'pointer', fontWeight: 600, fontSize: 13
-              }}
-            >
-              Load More ({page * 100} / {total})
-            </button>
+        {/* Infinite scroll sentinel */}
+        <div ref={sentinelRef} style={{ height: 1 }} />
+
+        {/* Loading more indicator */}
+        {loadingMore && (
+          <div style={{ textAlign: 'center', padding: '16px 0', color: '#8A92A6', fontSize: 13 }}>
+            Loading more...
+          </div>
+        )}
+
+        {/* End of list indicator */}
+        {!loading && !hasMore && cards.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '12px 0', color: '#2A3444', fontSize: 11 }}>
+            — {total} cards loaded —
           </div>
         )}
 

@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const revalidate = 300; // 5-min edge cache
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -11,7 +13,7 @@ export async function GET(request: NextRequest) {
   const q = searchParams.get('q') || '';
   const ip = searchParams.get('ip') || '';
   const page = parseInt(searchParams.get('page') || '1');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 100);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
   const sort = searchParams.get('sort') || 'price_desc';
   const offset = (page - 1) * limit;
 
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
     const { data: cards, error, count } = await query;
     if (error) throw error;
 
-    // Fetch 7-day sparkline for returned cards
+    // Batch-fetch 7-day sparkline for returned cards (single query, not N+1)
     const cardIds = (cards || []).map((c: { id: string }) => c.id);
     const sparklineMap: Record<string, number[]> = {};
 
@@ -88,13 +90,20 @@ export async function GET(request: NextRequest) {
       sparkline: sparklineMap[card.id as string] || [],
     }));
 
-    return NextResponse.json({
-      cards: enriched,
-      total: count || 0,
-      page,
-      limit,
-      pages: Math.ceil((count || 0) / limit),
-    });
+    return NextResponse.json(
+      {
+        cards: enriched,
+        total: count || 0,
+        page,
+        limit,
+        pages: Math.ceil((count || 0) / limit),
+      },
+      {
+        headers: {
+          'Cache-Control': 's-maxage=300, stale-while-revalidate=60',
+        },
+      }
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
