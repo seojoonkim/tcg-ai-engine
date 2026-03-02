@@ -87,25 +87,26 @@ export async function GET(request: NextRequest) {
 
     const enriched = (cards || []).map((card: Record<string, unknown>) => {
       const sparkline = sparklineMap[card.id as string] || [];
-      const currentPrice = (card.loose_price as number) || 0;
+      // price_history 기준으로 통일 (loose_price와 불일치 방지)
+      const currentPrice = sparkline.length > 0 ? sparkline[sparkline.length - 1] : ((card.loose_price as number) || 0);
       
-      // 24h 변화율: sparkline[-2] 기준 (약 1일 전)
+      // 24h 변화율: sparkline 마지막-1 기준
       let change24h: number | null = null;
-      if (sparkline.length >= 2 && currentPrice > 0) {
+      if (sparkline.length >= 2) {
         const prev = sparkline[sparkline.length - 2];
-        if (prev > 0) change24h = ((currentPrice - prev) / prev) * 100;
+        if (prev > 0) change24h = +((currentPrice - prev) / prev * 100).toFixed(2);
       }
       
-      // 7d 변화율: sparkline[0] 기준 (7일 전)
+      // 7d 변화율: sparkline 첫 값 기준
       let change7d: number | null = null;
-      if (sparkline.length >= 2 && currentPrice > 0) {
+      if (sparkline.length >= 2) {
         const prev7 = sparkline[0];
-        if (prev7 > 0) change7d = ((currentPrice - prev7) / prev7) * 100;
+        if (prev7 > 0) change7d = +((currentPrice - prev7) / prev7 * 100).toFixed(2);
       }
       
       return {
         ...card,
-        market_price: currentPrice,
+        market_price: +currentPrice.toFixed(2),
         change_24h: change24h,
         change_7d: change7d,
         sparkline,
