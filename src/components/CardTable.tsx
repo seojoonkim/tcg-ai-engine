@@ -16,22 +16,34 @@ interface Card {
   change_7d: number | null;
   sparkline: number[];
   tcgplayer_url?: string;
+  ip_name?: string;
 }
 
 type SortKey = 'rank' | 'price' | 'change_24h' | 'change_7d';
 type SortDir = 'asc' | 'desc';
 
+const IP_TABS = ['All', 'Pokémon', 'Magic: The Gathering', 'Yu-Gi-Oh!', 'One Piece', 'Lorcana'];
+const IP_API_MAP: Record<string, string> = {
+  'Pokémon': 'Pokemon',
+  'Magic: The Gathering': 'Magic: The Gathering',
+  'Yu-Gi-Oh!': 'Yu-Gi-Oh',
+  'One Piece': 'One Piece',
+  'Lorcana': 'Lorcana',
+};
+
 interface CardTableProps {
   cards: Card[];
   currency: 'USD' | 'KRW';
   onCardClick: (card: Card) => void;
+  onIpChange?: (ip: string) => void;
 }
 
-export default function CardTable({ cards, currency, onCardClick }: CardTableProps) {
+export default function CardTable({ cards, currency, onCardClick, onIpChange }: CardTableProps) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState('All');
 
   useEffect(() => {
     try {
@@ -53,6 +65,12 @@ export default function CardTable({ cards, currency, onCardClick }: CardTablePro
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('desc'); }
+  };
+
+  const handleTabClick = (tab: string) => {
+    setActiveTab(tab);
+    const apiIp = tab === 'All' ? '' : (IP_API_MAP[tab] || tab);
+    if (onIpChange) onIpChange(apiIp);
   };
 
   const sorted = [...cards].sort((a, b) => {
@@ -89,77 +107,102 @@ export default function CardTable({ cards, currency, onCardClick }: CardTablePro
   const tdStyle: React.CSSProperties = { padding: '12px 16px', borderBottom: '1px solid #2A3444', fontSize: 13, color: '#fff', verticalAlign: 'middle' };
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
-        <thead>
-          <tr style={{ background: '#1A2332' }}>
-            <th style={{ ...thStyle, width: 48, textAlign: 'center' }} onClick={() => handleSort('rank')}>#<SortArrow col="rank" /></th>
-            <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>★</th>
-            <th style={thStyle}>카드</th>
-            <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('price')}>가격<SortArrow col="price" /></th>
-            <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('change_24h')}>24h %<SortArrow col="change_24h" /></th>
-            <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('change_7d')}>7d %<SortArrow col="change_7d" /></th>
-            <th style={{ ...thStyle, textAlign: 'right' }}>최저가</th>
-            <th style={{ ...thStyle, textAlign: 'right' }}>최고가</th>
-            <th style={{ ...thStyle, textAlign: 'center', width: 110 }}>7d 차트</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((card, idx) => {
-            const is24Up = (card.change_24h ?? 0) >= 0;
-            const is7dUp = (card.change_7d ?? 0) >= 0;
-            const isFav = favorites.has(card.id);
-            const sparkPos = card.sparkline.length >= 2 ? card.sparkline[card.sparkline.length - 1] >= card.sparkline[0] : true;
-            return (
-              <tr
-                key={card.id}
-                onClick={() => onCardClick(card)}
-                style={{ cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#1F2D40')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                <td style={{ ...tdStyle, textAlign: 'center', color: '#8A92A6', fontWeight: 600 }}>{idx + 1}</td>
-                <td style={{ ...tdStyle, textAlign: 'center' }}>
-                  <button
-                    onClick={e => toggleFav(e, card.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: isFav ? '#F0B90B' : '#2A3444', lineHeight: 1 }}
-                  >★</button>
-                </td>
-                <td style={tdStyle}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 32, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {!imgErrors.has(card.id) && card.image_url ? (
-                        <img
-                          src={card.image_url}
-                          alt={card.name}
-                          style={{ maxWidth: 32, maxHeight: 44, objectFit: 'contain', borderRadius: 3 }}
-                          onError={() => setImgErrors(prev => new Set([...prev, card.id]))}
-                        />
-                      ) : <span style={{ fontSize: 20 }}>🃏</span>}
+    <div>
+      {/* IP Tabs */}
+      <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderBottom: '1px solid #2A3444', flexWrap: 'wrap' }}>
+        {IP_TABS.map(tab => (
+          <button
+            key={tab}
+            onClick={() => handleTabClick(tab)}
+            style={{
+              background: activeTab === tab ? '#F0B90B' : '#2A3444',
+              color: activeTab === tab ? '#000' : '#8A92A6',
+              border: 'none',
+              borderRadius: 6,
+              padding: '6px 14px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 12,
+              transition: 'all 0.15s',
+            }}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+          <thead>
+            <tr style={{ background: '#1A2332' }}>
+              <th style={{ ...thStyle, width: 48, textAlign: 'center' }} onClick={() => handleSort('rank')}>#<SortArrow col="rank" /></th>
+              <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>★</th>
+              <th style={thStyle}>Card</th>
+              <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('price')}>Price<SortArrow col="price" /></th>
+              <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('change_24h')}>24h %<SortArrow col="change_24h" /></th>
+              <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => handleSort('change_7d')}>7d %<SortArrow col="change_7d" /></th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>7d Low</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>7d High</th>
+              <th style={{ ...thStyle, textAlign: 'center', width: 110 }}>7d Chart</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((card, idx) => {
+              const is24Up = (card.change_24h ?? 0) >= 0;
+              const is7dUp = (card.change_7d ?? 0) >= 0;
+              const isFav = favorites.has(card.id);
+              const sparkPos = card.sparkline.length >= 2 ? card.sparkline[card.sparkline.length - 1] >= card.sparkline[0] : true;
+              return (
+                <tr
+                  key={card.id}
+                  onClick={() => onCardClick(card)}
+                  style={{ cursor: 'pointer', transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#1F2D40')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td style={{ ...tdStyle, textAlign: 'center', color: '#8A92A6', fontWeight: 600 }}>{idx + 1}</td>
+                  <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <button
+                      onClick={e => toggleFav(e, card.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: isFav ? '#F0B90B' : '#2A3444', lineHeight: 1 }}
+                    >★</button>
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 32, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {!imgErrors.has(card.id) && card.image_url ? (
+                          <img
+                            src={card.image_url}
+                            alt={card.name}
+                            style={{ maxWidth: 32, maxHeight: 44, objectFit: 'contain', borderRadius: 3 }}
+                            onError={() => setImgErrors(prev => new Set([...prev, card.id]))}
+                          />
+                        ) : <span style={{ fontSize: 20 }}>🃏</span>}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#fff', fontSize: 13, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.name}</div>
+                        <div style={{ color: '#8A92A6', fontSize: 11 }}>{card.set_name}{card.ip_name ? ` · ${card.ip_name}` : ''}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#fff', fontSize: 13, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.name}</div>
-                      <div style={{ color: '#8A92A6', fontSize: 11 }}>{card.set_name}</div>
-                    </div>
-                  </div>
-                </td>
-                <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#fff' }}>{fmtPrice(card.market_price)}</td>
-                <td style={{ ...tdStyle, textAlign: 'right', color: card.change_24h == null ? '#8A92A6' : is24Up ? '#16C784' : '#EA3943', fontWeight: 600 }}>
-                  {card.change_24h != null ? (is24Up ? '▲ ' : '▼ ') : ''}{fmtPct(card.change_24h)}
-                </td>
-                <td style={{ ...tdStyle, textAlign: 'right', color: card.change_7d == null ? '#8A92A6' : is7dUp ? '#16C784' : '#EA3943', fontWeight: 600 }}>
-                  {card.change_7d != null ? (is7dUp ? '▲ ' : '▼ ') : ''}{fmtPct(card.change_7d)}
-                </td>
-                <td style={{ ...tdStyle, textAlign: 'right', color: '#8A92A6' }}>{fmtPrice(card.low_price)}</td>
-                <td style={{ ...tdStyle, textAlign: 'right', color: '#8A92A6' }}>{fmtPrice(card.high_price)}</td>
-                <td style={{ ...tdStyle, padding: '6px 16px' }}>
-                  <Sparkline data={card.sparkline} positive={sparkPos} />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#fff' }}>{fmtPrice(card.market_price)}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', color: card.change_24h == null ? '#8A92A6' : is24Up ? '#16C784' : '#EA3943', fontWeight: 600 }}>
+                    {card.change_24h != null ? (is24Up ? '▲ ' : '▼ ') : ''}{fmtPct(card.change_24h)}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', color: card.change_7d == null ? '#8A92A6' : is7dUp ? '#16C784' : '#EA3943', fontWeight: 600 }}>
+                    {card.change_7d != null ? (is7dUp ? '▲ ' : '▼ ') : ''}{fmtPct(card.change_7d)}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', color: '#8A92A6' }}>{fmtPrice(card.low_price)}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', color: '#8A92A6' }}>{fmtPrice(card.high_price)}</td>
+                  <td style={{ ...tdStyle, padding: '6px 16px' }}>
+                    <Sparkline data={card.sparkline} positive={sparkPos} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

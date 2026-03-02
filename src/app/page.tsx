@@ -18,6 +18,7 @@ interface Card {
   change_7d: number | null;
   sparkline: number[];
   tcgplayer_url?: string;
+  ip_name?: string;
 }
 
 export default function Home() {
@@ -30,6 +31,7 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [currency, setCurrency] = useState<'USD' | 'KRW'>('USD');
+  const [activeIp, setActiveIp] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
@@ -40,6 +42,7 @@ export default function Home() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ q: debouncedSearch, page: String(page), limit: '100', sort: 'price_desc' });
+      if (activeIp) params.set('ip', activeIp);
       const res = await fetch(`/api/cards?${params}`);
       const data = await res.json();
       setCards(data.cards || []);
@@ -50,9 +53,14 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, page]);
+  }, [debouncedSearch, page, activeIp]);
 
   useEffect(() => { fetchCards(); }, [fetchCards]);
+
+  const handleIpChange = (ip: string) => {
+    setActiveIp(ip);
+    setPage(1);
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#0D1421', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
@@ -64,7 +72,7 @@ export default function Home() {
           <div style={{ flex: 1, position: 'relative', maxWidth: 360 }}>
             <input
               type="text"
-              placeholder="카드명, 세트명 검색..."
+              placeholder="Search cards..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
@@ -83,8 +91,8 @@ export default function Home() {
 
       {/* Page title */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 24px 12px' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>포켓몬 카드 시세</h1>
-        <p style={{ color: '#8A92A6', fontSize: 13, marginTop: 4 }}>시가총액 순 정렬 | 행 클릭 시 상세 차트</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>TCG Card Prices</h1>
+        <p style={{ color: '#8A92A6', fontSize: 13, marginTop: 4 }}>Sorted by market cap | Click row for price chart</p>
       </div>
 
       {/* Table */}
@@ -93,15 +101,15 @@ export default function Home() {
           {loading ? (
             <div style={{ padding: 60, textAlign: 'center', color: '#8A92A6' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-              <div>카드 데이터 로딩 중...</div>
+              <div>Loading card data...</div>
             </div>
           ) : cards.length === 0 ? (
             <div style={{ padding: 60, textAlign: 'center', color: '#8A92A6' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>🃏</div>
-              <div>카드가 없습니다</div>
+              <div>No cards found</div>
             </div>
           ) : (
-            <CardTable cards={cards} currency={currency} onCardClick={setSelectedCard} />
+            <CardTable cards={cards} currency={currency} onCardClick={setSelectedCard} onIpChange={handleIpChange} />
           )}
         </div>
 
@@ -116,7 +124,7 @@ export default function Home() {
                 cursor: 'pointer', fontWeight: 600, fontSize: 14
               }}
             >
-              더보기 ({page * 100} / {total})
+              Load More ({page * 100} / {total})
             </button>
           </div>
         )}

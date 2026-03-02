@@ -36,17 +36,17 @@ export default function StatsBar({ cards, total, currency, onCurrencyToggle }: S
   return (
     <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444', padding: '10px 0' }}>
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 20px', fontSize: 13, color: '#8A92A6' }}>
-        <span style={{ color: '#F0B90B', fontWeight: 700, fontSize: 14 }}>🃏 포켓몬 카드 시장</span>
+        <span style={{ color: '#F0B90B', fontWeight: 700, fontSize: 14 }}>🃏 TCG Card Market</span>
         <span style={{ color: '#2A3444' }}>|</span>
         <span>Cards: <strong style={{ color: '#fff' }}>{total.toLocaleString()}</strong></span>
         <span style={{ color: '#2A3444' }}>|</span>
-        <span>상승: <strong style={{ color: '#16C784' }}>{rising} ▲</strong></span>
+        <span>Gainers: <strong style={{ color: '#16C784' }}>{rising} ▲</strong></span>
         <span style={{ color: '#2A3444' }}>|</span>
-        <span>하락: <strong style={{ color: '#EA3943' }}>{falling} ▼</strong></span>
+        <span>Losers: <strong style={{ color: '#EA3943' }}>{falling} ▼</strong></span>
         <span style={{ color: '#2A3444' }}>|</span>
         <span>Total Value: <strong style={{ color: '#fff' }}>{fmt(totalVolume)}</strong></span>
         <span style={{ color: '#2A3444' }}>|</span>
-        <span>평균가: <strong style={{ color: '#fff' }}>{fmt(avgPrice)}</strong></span>
+        <span>Avg Price: <strong style={{ color: '#fff' }}>{fmt(avgPrice)}</strong></span>
         <span style={{ color: '#2A3444' }}>|</span>
         <button
           onClick={onCurrencyToggle}

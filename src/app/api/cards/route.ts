@@ -9,6 +9,7 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q') || '';
+  const ip = searchParams.get('ip') || '';
   const page = parseInt(searchParams.get('page') || '1');
   const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 100);
   const sort = searchParams.get('sort') || 'price_desc';
@@ -21,6 +22,10 @@ export async function GET(request: NextRequest) {
 
     if (q) {
       query = query.or(`name.ilike.%${q}%,set_name.ilike.%${q}%,rarity.ilike.%${q}%`);
+    }
+
+    if (ip) {
+      query = query.eq('ip_name', ip);
     }
 
     switch (sort) {

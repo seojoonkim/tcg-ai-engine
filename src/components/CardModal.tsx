@@ -49,7 +49,7 @@ export default function CardModal({ card, currency, onClose }: CardModalProps) {
   };
 
   const chartData = history.map(h => ({
-    date: new Date(h.recorded_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }),
+    date: new Date(h.recorded_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
     market: currency === 'KRW' ? +(h.market_price * 1320).toFixed(0) : h.market_price,
   }));
 
@@ -84,10 +84,10 @@ export default function CardModal({ card, currency, onClose }: CardModalProps) {
         {/* Price Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
           {[
-            { label: '현재가', value: fmtUSD(card.market_price), highlight: true },
+            { label: 'Price', value: fmtUSD(card.market_price), highlight: true },
             { label: '24h %', value: card.change_24h != null ? `${card.change_24h >= 0 ? '+' : ''}${card.change_24h.toFixed(2)}%` : '—', color: changeColor },
-            { label: '최저가', value: fmtUSD(card.low_price) },
-            { label: '최고가', value: fmtUSD(card.high_price) },
+            { label: '7d Low', value: fmtUSD(card.low_price) },
+            { label: '7d High', value: fmtUSD(card.high_price) },
           ].map(item => (
             <div key={item.label} style={{ background: '#0D1421', border: '1px solid #2A3444', borderRadius: 10, padding: '12px 14px' }}>
               <div style={{ color: '#8A92A6', fontSize: 11, marginBottom: 4 }}>{item.label}</div>
@@ -98,9 +98,9 @@ export default function CardModal({ card, currency, onClose }: CardModalProps) {
 
         {/* Chart */}
         <div>
-          <h3 style={{ color: '#8A92A6', fontSize: 13, marginBottom: 12 }}>30일 가격 히스토리</h3>
+          <h3 style={{ color: '#8A92A6', fontSize: 13, marginBottom: 12 }}>30-Day Price History</h3>
           {loading ? (
-            <div style={{ height: 200, background: '#0D1421', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A92A6' }}>로딩 중...</div>
+            <div style={{ height: 200, background: '#0D1421', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A92A6' }}>Loading...</div>
           ) : chartData.length > 1 ? (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -117,20 +117,20 @@ export default function CardModal({ card, currency, onClose }: CardModalProps) {
                 <Tooltip
                   contentStyle={{ background: '#1A2332', border: '1px solid #2A3444', borderRadius: 8 }}
                   labelStyle={{ color: '#8A92A6' }}
-                  formatter={(v: number | undefined) => [v != null ? (currency === 'KRW' ? `₩${v.toLocaleString()}` : `$${v.toFixed(2)}`) : 'N/A', '가격']}
+                  formatter={(v: number | undefined) => [v != null ? (currency === 'KRW' ? `₩${v.toLocaleString()}` : `$${v.toFixed(2)}`) : 'N/A', 'Price']}
                 />
                 <Area type="monotone" dataKey="market" stroke="#16C784" fill="url(#colorMarket)" strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: 200, background: '#0D1421', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A92A6' }}>히스토리 없음</div>
+            <div style={{ height: 200, background: '#0D1421', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A92A6' }}>No history available</div>
           )}
         </div>
 
         {card.tcgplayer_url && (
           <div style={{ marginTop: 16 }}>
             <a href={card.tcgplayer_url} target="_blank" rel="noopener noreferrer" style={{ color: '#F0B90B', fontSize: 13, textDecoration: 'none' }}>
-              TCGPlayer에서 보기 →
+              View on TCGPlayer →
             </a>
           </div>
         )}
