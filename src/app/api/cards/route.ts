@@ -106,11 +106,17 @@ export async function GET(request: NextRequest) {
         if (prev7 > 0 && Math.abs(raw7d) <= 500) change7d = +raw7d.toFixed(2);
       }
       
+      // 7d Low/High: sparkline 전체 min/max
+      const low_7d = sparkline.length > 0 ? +Math.min(...sparkline).toFixed(2) : null;
+      const high_7d = sparkline.length > 0 ? +Math.max(...sparkline).toFixed(2) : null;
+
       return {
         ...card,
         market_price: +currentPrice.toFixed(2),
         change_24h: change24h,
         change_7d: change7d,
+        low_price: low_7d,
+        high_price: high_7d,
         sparkline,
       };
     });
