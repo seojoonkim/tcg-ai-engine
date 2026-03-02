@@ -23,6 +23,8 @@ interface Card {
 
 export default function Home() {
   const [cards, setCards] = useState<Card[]>([]);
+  const [statsGainers, setStatsGainers] = useState(0);
+  const [statsLosers, setStatsLosers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
@@ -49,6 +51,7 @@ export default function Home() {
       const res = await fetch(`/api/cards?${params}`);
       const data = await res.json();
       setCards(prev => append ? [...prev, ...(data.cards || [])] : (data.cards || []));
+      if (!append) { setStatsGainers(data.gainers || 0); setStatsLosers(data.losers || 0); }
       setTotalPages(data.pages || 1);
       setTotal(data.total || 0);
     } catch (e) {
@@ -105,7 +108,7 @@ export default function Home() {
 
       {/* Stats bar - sticky */}
       <div style={{ position: 'sticky', top: 44, zIndex: 95, background: '#0D1421' }}>
-        <StatsBar cards={cards} total={total} currency={currency} onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')} />
+        <StatsBar cards={cards} total={total} currency={currency} gainers={statsGainers} losers={statsLosers} onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')} />
       </div>
 
       {/* Table */}

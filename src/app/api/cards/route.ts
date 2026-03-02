@@ -121,10 +121,34 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // 전체 gainers/losers: change_7d 기준, 전체 카드에서 집계
+    const allGainers = enriched.filter(c => (c.change_7d ?? 0) > 1).length;
+    const allLosers = enriched.filter(c => (c.change_7d ?? 0) < -1).length;
+
+    // page=1일 때만 전체 통계 별도 집계 (캐시 효율)
+    let globalGainers = allGainers;
+    let globalLosers = allLosers;
+    if (page === 1 && !search) {
+      // 전체 카드 count로 비율 추정 (정확한 값은 precompute 필요)
+      globalGainers = Math.round(allGainers / enriched.length * (count || 0));
+      globalLosers = Math.round(allLosers / enriched.length * (count || 0));
+    }
+
+    // 전체 gainers/losers: 로드된 카드 기준 → total 비율로 추정
+    const pageGainers = enriched.filter(c => (c.change_7d ?? 0) > 0).length;
+    const pageLosers = enriched.filter(c => (c.change_7d ?? 0) < 0).length;
+    const ratio = enriched.length > 0 ? (count || enriched.length) / enriched.length : 1;
+    const gainers = Math.round(pageGainers * ratio);
+    const losers = Math.round(pageLosers * ratio);
+
     return NextResponse.json(
       {
         cards: enriched,
         total: count || 0,
+        gainers,
+        losers,
+        gainers: globalGainers,
+        losers: globalLosers,
         page,
         limit,
         pages: Math.ceil((count || 0) / limit),

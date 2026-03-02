@@ -9,12 +9,14 @@ interface StatsBarProps {
   cards: Card[];
   total: number;
   currency: 'USD' | 'KRW';
+  gainers?: number;
+  losers?: number;
   onCurrencyToggle: () => void;
 }
 
-export default function StatsBar({ cards, total, currency, onCurrencyToggle }: StatsBarProps) {
-  const rising = cards.filter(c => (c.change_24h ?? 0) > 0).length;
-  const falling = cards.filter(c => (c.change_24h ?? 0) < 0).length;
+export default function StatsBar({ cards, total, currency, gainers, losers, onCurrencyToggle }: StatsBarProps) {
+  const rising = gainers ?? cards.filter(c => (c.change_24h ?? 0) > 0).length;
+  const falling = losers ?? cards.filter(c => (c.change_24h ?? 0) < 0).length;
   const priced = cards.filter(c => c.market_price != null);
   const avgPrice = priced.length > 0
     ? priced.reduce((sum, c) => sum + (c.market_price ?? 0), 0) / priced.length
