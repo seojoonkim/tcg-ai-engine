@@ -17,6 +17,7 @@ interface Card {
   sparkline: number[];
   tcgplayer_url?: string;
   ip_name?: string;
+  is_new?: boolean;
 }
 
 type SortKey = 'rank' | 'price' | 'change_24h' | 'change_7d';
@@ -149,10 +150,16 @@ export default function CardTable({ cards, currency, onCardClick, onIpChange, ac
                             style={{ width: 32, height: 44, objectFit: 'cover', borderRadius: 3 }}
                             onError={() => setImgErrors(prev => new Set([...prev, card.id]))}
                           />
-                        ) : <span style={{ fontSize: 16 }}>🃏</span>}
+                        ) : <span style={{ fontSize: 16 }}>{
+                          card.ip_name === 'Pokemon' ? '⚡' :
+                          card.ip_name === 'Magic: The Gathering' ? '🔮' :
+                          card.ip_name === 'Yu-Gi-Oh' ? '👁️' :
+                          card.ip_name === 'One Piece' ? '⚓' :
+                          card.ip_name === 'Lorcana' ? '✨' : '🃏'
+                        }</span>}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: '#fff', fontSize: 12, whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.name}</div>
+                        <div style={{ fontWeight: 600, color: '#fff', fontSize: 12, whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.name}{card.is_new ? <span style={{ marginLeft: 4, background: '#F0B90B', color: '#000', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>NEW</span> : null}</div>
                         <div style={{ color: '#8A92A6', fontSize: 10, marginTop: 1 }}>{card.set_name}{card.ip_name ? ` · ${card.ip_name}` : ''}</div>
                       </div>
                     </div>

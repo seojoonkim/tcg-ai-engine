@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Cache-Control header below handles edge caching
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -22,8 +20,10 @@ export async function GET(request: NextRequest) {
       .from('cards')
       .select('*', { count: 'exact' });
 
+    // Fix #4: Search sanitize
     if (q) {
-      query = query.or(`name.ilike.%${q}%,set_name.ilike.%${q}%,rarity.ilike.%${q}%`);
+      const sanitizedQ = q.replace(/[%_\\]/g, '\\$&');
+      query = query.or(`name.ilike.%${sanitizedQ}%,set_name.ilike.%${sanitizedQ}%,rarity.ilike.%${sanitizedQ}%`);
     }
 
     if (ip) {
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     const { data: cards, error, count } = await query;
     if (error) throw error;
 
-    // Batch-fetch 7-day sparkline for returned cards (single query, not N+1)
+    // Batch-fetch 7-day sparkline
     const cardIds = (cards || []).map((c: { id: string }) => c.id);
     const sparklineMap: Record<string, number[]> = {};
 
@@ -87,26 +87,31 @@ export async function GET(request: NextRequest) {
 
     const enriched = (cards || []).map((card: Record<string, unknown>) => {
       const sparkline = sparklineMap[card.id as string] || [];
-      // price_history 기준으로 통일 (loose_price와 불일치 방지)
-      const currentPrice = sparkline.length > 0 ? sparkline[sparkline.length - 1] : ((card.loose_price as number) || 0);
-      
-      // 24h 변화율: sparkline 마지막-1 기준
+
+      // Fix #1: loose_price primary, sparkline fallback
+      const currentPrice = card.loose_price
+        ? Number(card.loose_price)
+        : sparkline.length > 0 ? sparkline[sparkline.length - 1] : 0;
+
+      // Fix #2: is_new flag, no cap on change
+      const isNew = sparkline.length < 7;
+
       let change24h: number | null = null;
       if (sparkline.length >= 2) {
         const prev = sparkline[sparkline.length - 2];
-        const raw24h = (currentPrice - prev) / prev * 100;
-        if (Math.abs(raw24h) <= 500) change24h = +raw24h.toFixed(2);
+        if (prev > 0) {
+          change24h = +((currentPrice - prev) / prev * 100).toFixed(2);
+        }
       }
-      
-      // 7d 변화율: sparkline 첫 값 기준
+
       let change7d: number | null = null;
       if (sparkline.length >= 2) {
         const prev7 = sparkline[0];
-        const raw7d = prev7 > 0 ? (currentPrice - prev7) / prev7 * 100 : 0;
-        if (prev7 > 0 && Math.abs(raw7d) <= 500) change7d = +raw7d.toFixed(2);
+        if (prev7 > 0) {
+          change7d = +((currentPrice - prev7) / prev7 * 100).toFixed(2);
+        }
       }
-      
-      // 7d Low/High: sparkline 전체 min/max
+
       const low_7d = sparkline.length > 0 ? +Math.min(...sparkline).toFixed(2) : null;
       const high_7d = sparkline.length > 0 ? +Math.max(...sparkline).toFixed(2) : null;
 
@@ -118,28 +123,27 @@ export async function GET(request: NextRequest) {
         low_price: low_7d,
         high_price: high_7d,
         sparkline,
+        is_new: isNew,
       };
     });
 
-    // 전체 gainers/losers: change_7d 기준, 전체 카드에서 집계
-    const allGainers = enriched.filter(c => (c.change_7d ?? 0) > 1).length;
-    const allLosers = enriched.filter(c => (c.change_7d ?? 0) < -1).length;
-
-    // page=1일 때만 전체 통계 별도 집계 (캐시 효율)
-    let globalGainers = allGainers;
-    let globalLosers = allLosers;
-    if (page === 1 && !search) {
-      // 전체 카드 count로 비율 추정 (정확한 값은 precompute 필요)
-      globalGainers = Math.round(allGainers / enriched.length * (count || 0));
-      globalLosers = Math.round(allLosers / enriched.length * (count || 0));
-    }
-
-    // 전체 gainers/losers: 로드된 카드 기준 → total 비율로 추정
-    const pageGainers = enriched.filter(c => (c.change_7d ?? 0) > 0).length;
-    const pageLosers = enriched.filter(c => (c.change_7d ?? 0) < 0).length;
+    // Fix #5: Single gainers/losers calculation (was duplicated before)
+    const pageGainers = enriched.filter((c: { change_7d: number | null }) => (c.change_7d ?? 0) > 0).length;
+    const pageLosers = enriched.filter((c: { change_7d: number | null }) => (c.change_7d ?? 0) < 0).length;
     const ratio = enriched.length > 0 ? (count || enriched.length) / enriched.length : 1;
     const gainers = Math.round(pageGainers * ratio);
     const losers = Math.round(pageLosers * ratio);
+
+    // Fix #6: IP counts (page 1 only, no filter)
+    let ipCounts: Record<string, number> | undefined;
+    if (page === 1 && !ip) {
+      const ips = ['Pokemon', 'Magic: The Gathering', 'Yu-Gi-Oh', 'One Piece', 'Lorcana'];
+      ipCounts = {};
+      for (const ipName of ips) {
+        const { count: c } = await supabase.from('cards').select('id', { count: 'exact', head: true }).eq('ip_name', ipName);
+        ipCounts[ipName] = c || 0;
+      }
+    }
 
     return NextResponse.json(
       {
@@ -147,11 +151,10 @@ export async function GET(request: NextRequest) {
         total: count || 0,
         gainers,
         losers,
-        gainers: globalGainers,
-        losers: globalLosers,
         page,
         limit,
         pages: Math.ceil((count || 0) / limit),
+        ...(ipCounts ? { ip_counts: ipCounts } : {}),
       },
       {
         headers: {
