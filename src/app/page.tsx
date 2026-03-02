@@ -82,7 +82,7 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh', background: '#0D1421', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
       {/* Top header */}
-      <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444' }}>
+      <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 18 }}>🃏</span>
           <span style={{ color: '#F0B90B', fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px' }}>TCG AI Engine</span>
@@ -103,8 +103,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Stats bar */}
-      <StatsBar cards={cards} total={total} currency={currency} onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')} />
+      {/* Stats bar - sticky */}
+      <div style={{ position: 'sticky', top: 44, zIndex: 95, background: '#0D1421' }}>
+        <StatsBar cards={cards} total={total} currency={currency} onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')} />
+      </div>
 
       {/* Table */}
       <div style={{ width: '100%' }}>
