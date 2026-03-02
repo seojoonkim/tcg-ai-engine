@@ -43,7 +43,7 @@ function generatePriceHistory(cardId: string, market: number, low: number | null
   let currentHigh = high ?? market * 1.1;
   const today = new Date();
 
-  for (let i = 29; i >= 0; i--) {
+  for (let i = 14; i >= 0; i--) {
     const factor = 1 + (Math.random() * 0.06 - 0.03);
     currentMarket = Math.max(0.01, currentMarket * factor);
     currentLow = Math.max(0.01, currentLow * factor);
@@ -84,11 +84,11 @@ export async function GET(request: NextRequest) {
   }
 
   const page = parseInt(pageParam || '1');
-  if (isNaN(page) || page < 1 || page > 4) {
+  if (isNaN(page) || page < 1 || page > 20) {
     return NextResponse.json({ error: 'page must be 1-4' }, { status: 400 });
   }
 
-  const url = `${TCG_API_BASE}?q=supertype:Pokemon&pageSize=250&page=${page}`;
+  const url = `${TCG_API_BASE}?q=supertype:Pokemon&pageSize=50&page=${page}`;
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(8000),
