@@ -10,13 +10,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q') || '';
   const page = parseInt(searchParams.get('page') || '1');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
-  const sort = searchParams.get('sort') || 'name_asc';
+  const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 100);
+  const sort = searchParams.get('sort') || 'price_desc';
   const offset = (page - 1) * limit;
 
   try {
-    // Get latest prices via a subquery approach
-    // First get cards with latest price
     let query = supabase
       .from('cards_with_prices')
       .select('*', { count: 'exact' });
@@ -25,13 +23,24 @@ export async function GET(request: NextRequest) {
       query = query.or(`name.ilike.%${q}%,set_name.ilike.%${q}%,rarity.ilike.%${q}%`);
     }
 
-    // Sorting
     switch (sort) {
       case 'price_desc':
         query = query.order('market_price', { ascending: false, nullsFirst: false });
         break;
       case 'price_asc':
         query = query.order('market_price', { ascending: true, nullsFirst: false });
+        break;
+      case 'change_24h_desc':
+        query = query.order('change_24h', { ascending: false, nullsFirst: false });
+        break;
+      case 'change_24h_asc':
+        query = query.order('change_24h', { ascending: true, nullsFirst: false });
+        break;
+      case 'change_7d_desc':
+        query = query.order('change_7d', { ascending: false, nullsFirst: false });
+        break;
+      case 'change_7d_asc':
+        query = query.order('change_7d', { ascending: true, nullsFirst: false });
         break;
       case 'name_asc':
         query = query.order('name', { ascending: true });
@@ -40,17 +49,42 @@ export async function GET(request: NextRequest) {
         query = query.order('name', { ascending: false });
         break;
       default:
-        query = query.order('name', { ascending: true });
+        query = query.order('market_price', { ascending: false, nullsFirst: false });
     }
 
     query = query.range(offset, offset + limit - 1);
 
-    const { data, error, count } = await query;
-
+    const { data: cards, error, count } = await query;
     if (error) throw error;
 
+    // Fetch 7-day sparkline for returned cards
+    const cardIds = (cards || []).map((c: { id: string }) => c.id);
+    const sparklineMap: Record<string, number[]> = {};
+
+    if (cardIds.length > 0) {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: histRows } = await supabase
+        .from('price_history')
+        .select('card_id, market_price, recorded_at')
+        .in('card_id', cardIds)
+        .gte('recorded_at', sevenDaysAgo)
+        .order('recorded_at', { ascending: true });
+
+      if (histRows) {
+        for (const row of histRows) {
+          if (!sparklineMap[row.card_id]) sparklineMap[row.card_id] = [];
+          if (row.market_price != null) sparklineMap[row.card_id].push(row.market_price);
+        }
+      }
+    }
+
+    const enriched = (cards || []).map((card: Record<string, unknown>) => ({
+      ...card,
+      sparkline: sparklineMap[card.id as string] || [],
+    }));
+
     return NextResponse.json({
-      cards: data || [],
+      cards: enriched,
       total: count || 0,
       page,
       limit,
