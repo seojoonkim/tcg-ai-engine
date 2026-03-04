@@ -10,6 +10,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q') || '';
   const ip = searchParams.get('ip') || '';
+  const rarity = searchParams.get('rarity') || '';
+  const priceMin = searchParams.get('price_min') || '';
+  const priceMax = searchParams.get('price_max') || '';
+  const setFilter = searchParams.get('set') || '';
   const page = parseInt(searchParams.get('page') || '1');
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
   const sort = searchParams.get('sort') || 'price_desc';
@@ -20,7 +24,6 @@ export async function GET(request: NextRequest) {
       .from('cards')
       .select('*', { count: 'exact' });
 
-    // Fix #4: Search sanitize
     if (q) {
       const sanitizedQ = q.replace(/[%_\\]/g, '\\$&');
       query = query.or(`name.ilike.%${sanitizedQ}%,set_name.ilike.%${sanitizedQ}%,rarity.ilike.%${sanitizedQ}%`);
@@ -28,6 +31,22 @@ export async function GET(request: NextRequest) {
 
     if (ip) {
       query = query.eq('ip_name', ip);
+    }
+
+    if (rarity) {
+      query = query.eq('rarity', rarity);
+    }
+
+    if (priceMin) {
+      query = query.gte('loose_price', parseFloat(priceMin));
+    }
+
+    if (priceMax) {
+      query = query.lte('loose_price', parseFloat(priceMax));
+    }
+
+    if (setFilter) {
+      query = query.eq('set_name', setFilter);
     }
 
     switch (sort) {

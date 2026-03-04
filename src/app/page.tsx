@@ -1,9 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import StatsBar from '@/components/StatsBar';
+import { useState, useEffect, useCallback } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
+import Navbar from '@/components/Navbar';
+import StatsHeader from '@/components/StatsHeader';
+import CardGrid from '@/components/CardGrid';
 import CardTable from '@/components/CardTable';
-import CardModal from '@/components/CardModal';
+import FilterSidebar from '@/components/FilterSidebar';
+import ViewToggle from '@/components/ViewToggle';
+import SortDropdown from '@/components/SortDropdown';
 
 interface Card {
   id: string;
@@ -32,43 +37,77 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [currency, setCurrency] = useState<'USD' | 'KRW'>('USD');
   const [activeIp, setActiveIp] = useState('');
+  const [activeRarity, setActiveRarity] = useState('');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [sort, setSort] = useState('price_desc');
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [ipCounts, setIpCounts] = useState<Record<string, number>>({});
   const hasMore = page < totalPages;
 
+  // Debounce search
   useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); setCards([]); }, 400);
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+      setCards([]);
+    }, 400);
     return () => clearTimeout(t);
   }, [search]);
+
+  // Debounce price filters
+  const [debouncedPriceMin, setDebouncedPriceMin] = useState('');
+  const [debouncedPriceMax, setDebouncedPriceMax] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedPriceMin(priceMin);
+      setDebouncedPriceMax(priceMax);
+      setPage(1);
+      setCards([]);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [priceMin, priceMax]);
 
   const fetchCards = useCallback(async (pageNum: number, append: boolean) => {
     if (append) setLoadingMore(true);
     else setLoading(true);
     try {
-      const params = new URLSearchParams({ q: debouncedSearch, page: String(pageNum), limit: '50', sort: 'price_desc' });
+      const params = new URLSearchParams({
+        q: debouncedSearch,
+        page: String(pageNum),
+        limit: '50',
+        sort,
+      });
       if (activeIp) params.set('ip', activeIp);
+      if (activeRarity) params.set('rarity', activeRarity);
+      if (debouncedPriceMin) params.set('price_min', debouncedPriceMin);
+      if (debouncedPriceMax) params.set('price_max', debouncedPriceMax);
       const res = await fetch(`/api/cards?${params}`);
       const data = await res.json();
       setCards(prev => append ? [...prev, ...(data.cards || [])] : (data.cards || []));
-      if (!append) { setStatsGainers(data.gainers || 0); setStatsLosers(data.losers || 0); }
+      if (!append) {
+        setStatsGainers(data.gainers || 0);
+        setStatsLosers(data.losers || 0);
+      }
       setTotalPages(data.pages || 1);
       setTotal(data.total || 0);
+      if (data.ip_counts) setIpCounts(data.ip_counts);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [debouncedSearch, activeIp]);
+  }, [debouncedSearch, activeIp, activeRarity, debouncedPriceMin, debouncedPriceMax, sort]);
 
-  // Initial / search / IP change load
   useEffect(() => {
     setPage(1);
     fetchCards(1, false);
   }, [fetchCards]);
 
-  // Load More handler
   const handleLoadMore = () => {
     if (!hasMore || loadingMore) return;
     const nextPage = page + 1;
@@ -82,82 +121,115 @@ export default function Home() {
     setCards([]);
   };
 
+  const handleRarityChange = (rarity: string) => {
+    setActiveRarity(rarity);
+    setPage(1);
+    setCards([]);
+  };
+
+  const handleSortChange = (s: string) => {
+    setSort(s);
+    setPage(1);
+    setCards([]);
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0D1421', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      {/* Top header */}
-      <div style={{ background: '#0D1421', borderBottom: '1px solid #2A3444', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 18 }}>🃏</span>
-          <span style={{ color: '#F0B90B', fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px' }}>TCG AI Engine</span>
-          <div style={{ flex: 1, position: 'relative', maxWidth: 320 }}>
-            <input
-              type="text"
-              placeholder="Search cards..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                width: '100%', background: '#1A2332', border: '1px solid #2A3444',
-                borderRadius: 6, padding: '6px 14px 6px 32px', color: '#fff',
-                fontSize: 12, outline: 'none', boxSizing: 'border-box'
-              }}
-            />
-            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8A92A6', fontSize: 12 }}>🔍</span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <Navbar
+        search={search}
+        onSearchChange={setSearch}
+        currency={currency}
+        onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')}
+      />
 
-      {/* Stats bar - sticky */}
-      <div style={{ position: 'sticky', top: 44, zIndex: 95, background: '#0D1421' }}>
-        <StatsBar cards={cards} total={total} currency={currency} gainers={statsGainers} losers={statsLosers} onCurrencyToggle={() => setCurrency(c => c === 'USD' ? 'KRW' : 'USD')} />
-      </div>
+      <StatsHeader
+        cards={cards}
+        total={total}
+        currency={currency}
+        gainers={statsGainers}
+        losers={statsLosers}
+      />
 
-      {/* Table */}
-      <div style={{ width: '100%' }}>
-        <div style={{ background: '#1A2332', borderTop: '1px solid #2A3444', overflow: 'hidden' }}>
-          {loading ? (
-            <div style={{ padding: 60, textAlign: 'center', color: '#8A92A6' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-              <div>Loading card data...</div>
+      <div className="mx-auto flex max-w-[1600px]">
+        {/* Sidebar */}
+        <FilterSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          activeIp={activeIp}
+          onIpChange={handleIpChange}
+          activeRarity={activeRarity}
+          onRarityChange={handleRarityChange}
+          priceMin={priceMin}
+          priceMax={priceMax}
+          onPriceMinChange={setPriceMin}
+          onPriceMaxChange={setPriceMax}
+          ipCounts={ipCounts}
+        />
+
+        {/* Main */}
+        <main className="flex-1 min-w-0">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-6" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer lg:hidden"
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <SlidersHorizontal size={14} />
+                Filters
+              </button>
+              <SortDropdown value={sort} onChange={handleSortChange} />
             </div>
+            <ViewToggle view={view} onViewChange={setView} />
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20" style={{ color: 'var(--text-secondary)' }}>
+              <div
+                className="mb-3 h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+                style={{ borderColor: 'var(--border-subtle)', borderTopColor: 'transparent' }}
+              />
+              <span className="text-sm">Loading cards...</span>
+            </div>
+          ) : view === 'grid' ? (
+            <CardGrid cards={cards} currency={currency} />
           ) : (
-            <CardTable cards={cards} currency={currency} onCardClick={setSelectedCard} onIpChange={handleIpChange} activeIp={activeIp} />
+            <div className="p-4 md:p-6">
+              <CardTable cards={cards} currency={currency} />
+            </div>
           )}
-        </div>
 
-        {/* Load More button */}
-        {hasMore && (
-          <div style={{ textAlign: "center", padding: "24px" }}>
-            <button
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              style={{ background: "#F0B90B", color: "#000", border: "none", borderRadius: 8, padding: "10px 32px", fontWeight: 700, fontSize: 14, cursor: loadingMore ? "not-allowed" : "pointer", opacity: loadingMore ? 0.6 : 1 }}
-            >
-              {loadingMore ? "Loading..." : "Load More"}
-            </button>
-          </div>
-        )}
+          {/* Load More */}
+          {hasMore && !loading && (
+            <div className="flex justify-center pb-8">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="rounded-lg px-8 py-2.5 text-sm font-semibold cursor-pointer transition-opacity"
+                style={{
+                  background: 'var(--accent-primary)',
+                  color: 'var(--bg-primary)',
+                  opacity: loadingMore ? 0.6 : 1,
+                }}
+              >
+                {loadingMore ? 'Loading...' : 'Load More'}
+              </button>
+            </div>
+          )}
 
-        {/* Loading more indicator */}
-        {loadingMore && (
-          <div style={{ textAlign: 'center', padding: '16px 0', color: '#8A92A6', fontSize: 13 }}>
-            Loading more...
-          </div>
-        )}
-
-        {/* End of list indicator */}
-        {!loading && !hasMore && cards.length > 0 && (
-          <div style={{ textAlign: 'center', padding: '12px 0', color: '#2A3444', fontSize: 11 }}>
-            — {total} cards loaded —
-          </div>
-        )}
-
-        <div style={{ height: 32 }} />
+          {!loading && !hasMore && cards.length > 0 && (
+            <div className="pb-8 text-center text-xs" style={{ color: 'var(--border-subtle)' }}>
+              — {total} cards —
+            </div>
+          )}
+        </main>
       </div>
-
-      {/* Modal */}
-      {selectedCard && (
-        <CardModal card={selectedCard} currency={currency} onClose={() => setSelectedCard(null)} />
-      )}
     </div>
   );
 }
